@@ -621,42 +621,66 @@ function setSyncLbl(msg, spin) {
   el.className = 'slbl' + (spin ? ' spin' : '');
 }
 
-// Envia dados para o Apps Script via POST num iframe oculto.
-// Esta tecnica contorna o bloqueio CORS completamente.
-// O script executa e grava na sheet — nao conseguimos ler a resposta,
-// mas podemos confirmar pelo timeout que o pedido foi enviado.
-function postToScript(params, onDone) {
-  if (!CFG.url) return;
-
-  var iframe = document.getElementById('sync-iframe');
-  if (!iframe) {
-    iframe = document.createElement('iframe');
-    iframe.id = 'sync-iframe';
-    iframe.name = 'sync-iframe';
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-  }
-
-  var form = document.createElement('form');
-  form.method = 'POST';
-  form.action = CFG.url;
-  form.target = 'sync-iframe';
-  form.style.display = 'none';
-
-  Object.keys(params).forEach(function(k) {
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = k;
-    input.value = typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k];
-    form.appendChild(input);
+// Merge local com dados vindos da sheet.
+// A sheet e a fonte de verdade central — junta tudo por ID.
+function mergeFromSheet(sheetAvarias, sheetFrota) {
+  // --- Merge Avarias ---
+  var byId = {};
+  // Primeiro os dados locais
+  DB.forEach(function(a) { byId[a.id] = a; });
+  // Depois os da sheet — adiciona os que nao existem localmente
+  (sheetAvarias || []).forEach(function(r) {
+    var id = r.ID || r.id;
+    if (!id) return;
+    if (!byId[id]) {
+      // Registo que existe na sheet mas nao localmente — importar
+      var notasStr = r.Notas || r.notas || '';
+      var notas = notasStr ? notasStr.split(' | ').map(function(n) {
+        var sep = n.indexOf(': ');
+        return sep > 0 ? { data: n.slice(0, sep), texto: n.slice(sep + 2) } : { data: '', texto: n };
+      }) : [];
+      byId[id] = {
+        id: id,
+        matricula: r.Matricula || r.matricula || '',
+        tipo: r.Tipo || r.tipo || '',
+        estado: r.Estado || r.estado || '',
+        dataAvaria: r.DataAvaria || r.dataAvaria || '',
+        dataEntrada: r.EntradaOficina || r.dataEntrada || '',
+        dataSaida: r.PrevisaoSaida || r.dataSaida || '',
+        oficina: r.Oficina || r.oficina || '',
+        motorista: r.Motorista || r.motorista || '',
+        custo: r.Custo || r.custo || '',
+        descricao: r.Descricao || r.descricao || '',
+        notas: notas
+      };
+    }
   });
+  DB = Object.keys(byId).map(function(k) { return byId[k]; });
+  saveDB();
 
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-
-  // Apos 2 segundos assumimos que o script executou
-  if (onDone) setTimeout(onDone, 2000);
+  // --- Merge Frota ---
+  var byMat = {};
+  FROTA.forEach(function(v) { byMat[v.matricula] = v; });
+  (sheetFrota || []).forEach(function(r) {
+    var mat = r.Matricula || r.matricula;
+    if (!mat) return;
+    if (!byMat[mat]) {
+      byMat[mat] = {
+        matricula: mat,
+        descricao: r.Descricao || r.descricao || '',
+        marca: r.Marca || r.marca || '',
+        modelo: r.Modelo || r.modelo || '',
+        ano: r.Ano || r.ano || '',
+        estado: r.Estado || r.estado || 'ativa',
+        dataEntrada: r.DataEntrada || r.dataEntrada || '',
+        dataSaida: r.DataSaida || r.dataSaida || '',
+        motivoSaida: r.MotivoSaida || r.motivoSaida || '',
+        notas: r.Notas || r.notas || ''
+      };
+    }
+  });
+  FROTA = Object.keys(byMat).map(function(k) { return byMat[k]; });
+  saveFROTA();
 }
 
 function doSync() {
@@ -667,11 +691,44 @@ function doSync() {
   syncing = true;
   setSyncLbl('A sincronizar...', true);
 
-  var payload = { avarias: DB, frota: FROTA };
-  postToScript({ action: 'saveAll', data: JSON.stringify(payload) }, function() {
-    syncing = false;
-    setSyncLbl('Sincronizado ' + new Date().toLocaleTimeString('pt-PT'));
-  });
+  // Passo 1: envia dados locais para a sheet (merge no servidor)
+  // Passo 2: busca o estado completo apos merge e atualiza localmente
+  var payload = JSON.stringify({ avarias: DB, frota: FROTA });
+  var url = CFG.url + '?action=mergeAll&data=' + encodeURIComponent(payload);
+
+  fetch(url, { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      if (j.ok) {
+        // Atualiza dados locais com o merge completo da sheet
+        mergeFromSheet(j.avarias, j.frota);
+        syncing = false;
+        setSyncLbl('Sincronizado ' + new Date().toLocaleTimeString('pt-PT'));
+        // Refresh da vista atual
+        var pg = document.querySelector('.pg.on');
+        if (pg) {
+          var id = pg.id.replace('pg-', '');
+          var fns = { reuniao: renderReu, frota: renderFrota, hist: renderHist };
+          if (fns[id]) fns[id]();
+        }
+      } else {
+        throw new Error(j.error || j.msg || 'Erro desconhecido');
+      }
+    })
+    .catch(function(err) {
+      // CORS bloqueado — tenta no-cors (grava mas nao le resposta)
+      console.warn('Fetch bloqueado, a tentar no-cors:', err);
+      fetch(url, { mode: 'no-cors' })
+        .then(function() {
+          syncing = false;
+          setSyncLbl('Enviado (sem confirmacao de merge)');
+        })
+        .catch(function(e2) {
+          syncing = false;
+          setSyncLbl('Sem ligacao - dados guardados localmente');
+          console.error('Sync falhou:', e2);
+        });
+    });
 }
 
 // ===== MODAL GENERICO =====
