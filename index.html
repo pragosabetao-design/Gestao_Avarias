@@ -209,6 +209,21 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:va
           <div id="cfg-st" style="margin-top:9px"></div>
         </div></div>
       </div>
+
+      <div style="margin-top:24px;padding-top:20px;border-top:.5px solid var(--bo)">
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Backup e Restauro</div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.6">Exporte todos os dados para um ficheiro JSON antes de atualizar a aplicacao. Para restaurar noutro browser ou dispositivo, importe o mesmo ficheiro.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn bd" onclick="exportJSON()">Exportar backup (JSON)</button>
+          <button class="btn" onclick="document.getElementById('import-file').click()">Importar backup (JSON)</button>
+          <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+          <span id="import-status" style="font-size:12px;color:var(--gt)"></span>
+        </div>
+        <div style="margin-top:12px;padding:10px 13px;background:var(--rbg);border:.5px solid #ECA0A0;border-radius:var(--r);font-size:11px;color:var(--rt)">
+          Ao importar um backup, os dados atuais sao substituidos. Faca sempre um export antes de importar.
+        </div>
+      </div>
+    </div>
     </div>
 
   </main>
@@ -605,6 +620,53 @@ async function doSync() {
 
 // ===== MODAL GENERICO =====
 function closeM(id) { document.getElementById(id).classList.remove('on'); editAvId = null; editViatId = null; }
+
+// ===== BACKUP / RESTAURO =====
+function exportJSON() {
+  var backup = {
+    versao: '2',
+    data: td(),
+    hora: new Date().toLocaleTimeString('pt-PT'),
+    avarias: DB,
+    frota: FROTA,
+    reunioes: HIST
+  };
+  var json = JSON.stringify(backup, null, 2);
+  var el = document.createElement('a');
+  el.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  el.download = 'backup_avarias_' + td() + '.json';
+  el.click();
+}
+
+function importJSON(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!data.avarias && !data.frota) { alert('Ficheiro invalido. Nao parece ser um backup desta aplicacao.'); return; }
+      var nAv = (data.avarias || []).length;
+      var nFr = (data.frota || []).length;
+      if (!confirm('Vai restaurar:\n- ' + nAv + ' avaria(s)\n- ' + nFr + ' viatura(s)\n\nOs dados atuais serao substituidos. Continuar?')) {
+        document.getElementById('import-file').value = '';
+        return;
+      }
+      DB = data.avarias || [];
+      FROTA = data.frota || [];
+      HIST = data.reunioes || [];
+      saveDB(); saveFROTA();
+      localStorage.setItem('av_hist', JSON.stringify(HIST));
+      doSync();
+      document.getElementById('import-status').textContent = 'Restaurado com sucesso: ' + nAv + ' avarias, ' + nFr + ' viaturas.';
+      document.getElementById('import-file').value = '';
+      setTimeout(function() { document.getElementById('import-status').textContent = ''; }, 5000);
+    } catch(err) {
+      alert('Erro ao ler o ficheiro: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
 
 // ===== INIT =====
 document.getElementById('fde').value = td();
