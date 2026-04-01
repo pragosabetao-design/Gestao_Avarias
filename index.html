@@ -482,7 +482,9 @@ function openMViatura(matricula) {
   var v = matricula ? FROTA.find(function(x) { return x.matricula === matricula; }) : null;
   document.getElementById('mv-titulo').textContent = v ? 'Editar viatura' : 'Adicionar viatura';
   document.getElementById('mv-mat').value = v ? v.matricula : '';
-  document.getElementById('mv-mat').disabled = !!v;
+  document.getElementById('mv-mat').disabled = false;
+  document.getElementById('mv-mat').readOnly = !!v;
+  document.getElementById('mv-mat').style.opacity = v ? '0.6' : '1';
   document.getElementById('mv-desc').value = v ? (v.descricao || '') : '';
   document.getElementById('mv-marca').value = v ? (v.marca || '') : '';
   document.getElementById('mv-modelo').value = v ? (v.modelo || '') : '';
@@ -496,7 +498,8 @@ function openMViatura(matricula) {
 }
 
 function saveViatura() {
-  var mat = document.getElementById('mv-mat').value.trim().toUpperCase();
+  var matField = document.getElementById('mv-mat');
+  var mat = matField.disabled ? (editViatId || '').toUpperCase() : matField.value.trim().toUpperCase();
   if (!mat) { alert('Matricula obrigatoria.'); return; }
   var existe = FROTA.findIndex(function(x) { return x.matricula === mat; });
   var v = {
@@ -521,7 +524,10 @@ function marcarSaida(matricula) {
   if (!v) return;
   editViatId = matricula;
   document.getElementById('mv-titulo').textContent = 'Retirar da frota - ' + matricula;
-  document.getElementById('mv-mat').value = v.matricula; document.getElementById('mv-mat').disabled = true;
+  document.getElementById('mv-mat').value = v.matricula;
+  document.getElementById('mv-mat').disabled = false;
+  document.getElementById('mv-mat').readOnly = true;
+  document.getElementById('mv-mat').style.opacity = '0.6';
   document.getElementById('mv-desc').value = v.descricao || '';
   document.getElementById('mv-marca').value = v.marca || '';
   document.getElementById('mv-modelo').value = v.modelo || '';
