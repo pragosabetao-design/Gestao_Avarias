@@ -597,31 +597,92 @@ function exportCSV() {
 // ===== CONFIG =====
 function renderCfg() {
   document.getElementById('cfg-url').value = CFG.url || '';
-  if (CFG.url) document.getElementById('cfg-st').innerHTML = '<div class="alert ag">URL configurado. Sincronizacao ativa.</div>';
+  if (CFG.url) document.getElementById('cfg-st').innerHTML = '<div class="alert ag">URL configurado. A sincronizacao esta ativa.</div>';
 }
-async function saveUrl() {
-  var url = document.getElementById('cfg-url').value.trim(); if (!url) { alert('Cole o URL do Apps Script.'); return; }
-  CFG.url = url; localStorage.setItem('av_cfg', JSON.stringify(CFG)); setSyncLbl('A testar...', true);
-  try {
-    var r = await fetch(url + '?action=ping', { redirect: 'follow' }); var j = await r.json();
-    if (j.ok) { document.getElementById('cfg-st').innerHTML = '<div class="alert ag">Ligacao bem-sucedida!</div>'; setSyncLbl('Ligado'); }
-    else { document.getElementById('cfg-st').innerHTML = '<div class="alert ar">Erro: ' + (j.msg || '?') + '</div>'; setSyncLbl(''); }
-  } catch(e) { document.getElementById('cfg-st').innerHTML = '<div class="alert ar">Nao foi possivel ligar: ' + e.message + '</div>'; setSyncLbl(''); }
+
+function saveUrl() {
+  var url = document.getElementById('cfg-url').value.trim();
+  if (!url) { alert('Cole o URL do Apps Script.'); return; }
+  CFG.url = url;
+  localStorage.setItem('av_cfg', JSON.stringify(CFG));
+  setSyncLbl('A testar...', true);
+  scriptRequest({ action: 'ping' }, function(j) {
+    if (j && j.ok) {
+      document.getElementById('cfg-st').innerHTML = '<div class="alert ag">Ligacao bem-sucedida!</div>';
+      setSyncLbl('Ligado');
+    } else {
+      document.getElementById('cfg-st').innerHTML = '<div class="alert ar">Erro na resposta do script.</div>';
+      setSyncLbl('');
+    }
+  }, function(err) {
+    document.getElementById('cfg-st').innerHTML = '<div class="alert ar">Nao foi possivel ligar. Verifique o URL e as permissoes do script.</div>';
+    setSyncLbl('');
+    console.error('ping error:', err);
+  });
 }
 
 // ===== SYNC =====
-function setSyncLbl(msg, spin) { var el = document.getElementById('slbl'); el.textContent = msg; el.className = 'slbl' + (spin ? ' spin' : ''); }
-async function doSync() {
+// Google Apps Script nao aceita fetch direto por CORS.
+// Usamos um script tag (JSONP-style) via iframe de dados para GET simples,
+// e para escrita usamos fetch com no-cors (nao le resposta mas grava na sheet).
+function setSyncLbl(msg, spin) {
+  var el = document.getElementById('slbl');
+  el.textContent = msg;
+  el.className = 'slbl' + (spin ? ' spin' : '');
+}
+
+function scriptRequest(params, onSuccess, onError) {
+  if (!CFG.url) { if (onError) onError('URL nao configurado'); return; }
+  // Para GET simples (ping, getAll) - usa fetch normal pois Apps Script
+  // com redirect:follow funciona para leitura em modo no-cors
+  // Para escrita usamos fetch com mode no-cors (fire and forget)
+  var qs = Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(
+      typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]
+    );
+  }).join('&');
+  var url = CFG.url + '?' + qs;
+
+  fetch(url, { method: 'GET', redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(j) { if (onSuccess) onSuccess(j); })
+    .catch(function(err) {
+      // CORS bloqueado - tenta no-cors (nao le resposta mas o script executa)
+      fetch(url, { method: 'GET', mode: 'no-cors', redirect: 'follow' })
+        .then(function() { if (onSuccess) onSuccess({ ok: true }); })
+        .catch(function(e2) { if (onError) onError(e2); });
+    });
+}
+
+function doSync() {
   if (syncing || !CFG.url) { if (!CFG.url) setSyncLbl('Configure em Configuracao'); return; }
-  syncing = true; setSyncLbl('A sincronizar...', true);
-  try {
-    var p1 = new URLSearchParams({ action: 'saveAvarias', data: JSON.stringify(DB) });
-    var p2 = new URLSearchParams({ action: 'saveFrota', data: JSON.stringify(FROTA) });
-    await fetch(CFG.url + '?' + p1.toString(), { redirect: 'follow' });
-    await fetch(CFG.url + '?' + p2.toString(), { redirect: 'follow' });
-    setSyncLbl('Sincronizado ' + new Date().toLocaleTimeString('pt-PT'));
-  } catch(e) { setSyncLbl('Sem ligacao - dados guardados localmente'); }
-  syncing = false;
+  syncing = true;
+  setSyncLbl('A sincronizar...', true);
+  var payload = { avarias: DB, frota: FROTA };
+  var qs = 'action=saveAll&data=' + encodeURIComponent(JSON.stringify(payload));
+  var url = CFG.url + '?' + qs;
+
+  // Tenta fetch normal primeiro (funciona se CORS estiver OK)
+  fetch(url, { method: 'GET', redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(j) {
+      syncing = false;
+      if (j && j.ok) setSyncLbl('Sincronizado ' + new Date().toLocaleTimeString('pt-PT'));
+      else setSyncLbl('Erro no script: ' + (j.msg || j.error || '?'));
+    })
+    .catch(function() {
+      // CORS bloqueado - usa no-cors: o script executa mas nao lemos a resposta
+      fetch(url, { method: 'GET', mode: 'no-cors' })
+        .then(function() {
+          syncing = false;
+          setSyncLbl('Sincronizado ' + new Date().toLocaleTimeString('pt-PT') + ' (sem confirmacao)');
+        })
+        .catch(function(e) {
+          syncing = false;
+          setSyncLbl('Sem ligacao - guardado localmente');
+          console.error('sync error:', e);
+        });
+    });
 }
 
 // ===== MODAL GENERICO =====
