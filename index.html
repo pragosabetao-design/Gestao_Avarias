@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Avarias — Frota</title>
+<style>
+:root{--bg:#F7F6F3;--s:#FFF;--s2:#EFEDE7;--bo:rgba(0,0,0,.09);--b2:rgba(0,0,0,.16);--t:#1C1B18;--t2:#62615D;--t3:#9A9891;--r:10px;--r2:14px;--red:#D94040;--rbg:#FBE8E8;--rt:#952B2B;--amb:#B86E10;--abg:#FAF0DC;--at:#7A4A09;--grn:#2F6B10;--gbg:#E5F2DA;--gt:#1E4A09;--blu:#1460A0;--bbg:#E2EFF9;--bt:#0A3F72}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--t);min-height:100vh;font-size:14px}
+a{color:var(--blu)}
+.top{height:52px;background:var(--t);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50}
+.logo{color:#F7F6F3;font-size:13px;letter-spacing:.1em;text-transform:uppercase}
+.logo em{opacity:.35;font-style:normal;margin:0 7px}
+.top-r{display:flex;align-items:center;gap:12px}
+.slbl{font-size:11px;color:rgba(247,246,243,.4);letter-spacing:.02em}
+.tbtn{padding:5px 13px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,.2);background:transparent;color:#F7F6F3;font-family:inherit;transition:background .15s}
+.tbtn:hover{background:rgba(255,255,255,.1)}
+.wrap{display:grid;grid-template-columns:186px 1fr;min-height:calc(100vh - 52px)}
+.nav{background:var(--s);border-right:.5px solid var(--bo);padding:16px 0}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 18px;font-size:13px;color:var(--t2);cursor:pointer;border-left:2px solid transparent;transition:all .12s;user-select:none}
+.ni:hover{background:var(--s2);color:var(--t)}.ni.on{color:var(--t);border-left-color:var(--t);background:var(--s2);font-weight:500}
+.ic{font-size:13px;width:15px;text-align:center}
+.sep{height:.5px;background:var(--bo);margin:10px 18px}
+.main{padding:28px 32px;overflow-y:auto}
+.pg{display:none}.pg.on{display:block}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.pt{font-size:20px;font-weight:400;margin-bottom:3px}.ps{font-size:12px;color:var(--t3)}
+.mets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.met{background:var(--s);border:.5px solid var(--bo);border-radius:var(--r);padding:13px 15px}
+.ml{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.mv{font-size:24px;font-weight:300}.mv.r{color:var(--red)}.mv.a{color:var(--amb)}.mv.g{color:var(--grn)}
+.ms{font-size:11px;color:var(--t3);margin-top:1px}
+.alert{padding:9px 13px;border-radius:var(--r);font-size:12px;margin-bottom:8px;display:flex;gap:7px;align-items:flex-start;line-height:1.5}
+.ar{background:var(--rbg);color:var(--rt);border:.5px solid #ECA0A0}.aa{background:var(--abg);color:var(--at);border:.5px solid #F5C87A}
+.ab{background:var(--bbg);color:var(--bt);border:.5px solid #8BBDE8}.ag{background:var(--gbg);color:var(--gt);border:.5px solid #8EC962}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.cb{background:var(--s);border:.5px solid var(--bo);border-radius:var(--r);padding:12px 16px}
+.ct2{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--t3);margin-bottom:10px}
+.cr{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:.5px solid var(--bo)}.cr:last-child{border:none}
+.dn{color:var(--red);font-size:11px}.up{color:var(--grn);font-size:11px}
+.card{background:var(--s);border:.5px solid var(--bo);border-radius:var(--r2);padding:16px 18px;margin-bottom:9px;transition:border-color .15s}.card:hover{border-color:var(--b2)}
+.ch{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px}
+.cn{font-size:15px;font-weight:500}.cs{font-size:11px;color:var(--t3);margin-top:2px}
+.bgs{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.b{display:inline-flex;align-items:center;font-size:10px;padding:3px 7px;border-radius:6px;font-weight:500;white-space:nowrap}
+.br2{background:var(--rbg);color:var(--rt)}.ba2{background:var(--abg);color:var(--at)}.bg2{background:var(--gbg);color:var(--gt)}.bb2{background:var(--bbg);color:var(--bt)}.bx{background:var(--s2);color:var(--t2)}
+.ig{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:10px}
+.ig label{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px}
+.ig strong{font-size:12px;font-weight:500}
+.prog{height:3px;background:var(--s2);border-radius:2px;margin-bottom:10px;overflow:hidden}.pf{height:100%;border-radius:2px}
+.notas{border-top:.5px solid var(--bo);padding-top:9px}
+.nota{display:flex;gap:9px;padding:3px 0;font-size:12px}
+.nd{color:var(--t3);min-width:82px;flex-shrink:0}.nt{color:var(--t2);line-height:1.5}
+.nadd{display:flex;gap:6px;margin-top:8px}
+.nadd input{flex:1;padding:6px 9px;font-size:12px;border:.5px solid var(--b2);border-radius:7px;background:var(--bg);color:var(--t);font-family:inherit}
+.nadd input:focus{outline:none;border-color:var(--t2)}
+.btn{padding:7px 13px;font-size:12px;border:.5px solid var(--b2);border-radius:7px;cursor:pointer;background:var(--s);color:var(--t);font-family:inherit;transition:background .12s;white-space:nowrap}
+.btn:hover{background:var(--s2)}.bd{background:var(--t);color:var(--bg);border-color:var(--t)}.bd:hover{opacity:.85;background:var(--t)}
+.bs{padding:5px 10px;font-size:11px}.btnrow{display:flex;gap:7px}
+.fcard{background:var(--s);border:.5px solid var(--bo);border-radius:var(--r2);padding:20px 24px;max-width:660px}
+.fsec{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin:16px 0 9px}.fsec:first-child{margin-top:0}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:11px}.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+.fgrp{display:flex;flex-direction:column;gap:4px}.fgrp label{font-size:11px;color:var(--t2)}
+.fgrp input,.fgrp select,.fgrp textarea{padding:7px 10px;font-size:13px;border:.5px solid var(--b2);border-radius:7px;background:var(--bg);color:var(--t);font-family:inherit;transition:border-color .12s}
+.fgrp input:focus,.fgrp select:focus,.fgrp textarea:focus{outline:none;border-color:var(--t2)}
+.fgrp textarea{min-height:65px;resize:vertical}
+.tbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.srch{padding:7px 10px;font-size:12px;border:.5px solid var(--b2);border-radius:7px;background:var(--s);color:var(--t);font-family:inherit;width:175px}
+.srch:focus{outline:none;border-color:var(--t3)}.tbar-r{display:flex;gap:7px;align-items:center}
+.setup{background:var(--s);border:.5px solid var(--bo);border-radius:var(--r2);padding:22px 26px;max-width:600px}
+.step{display:flex;gap:14px;margin-bottom:18px;align-items:flex-start}
+.snum{width:26px;height:26px;border-radius:50%;background:var(--t);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:2px}
+.stit{font-size:13px;font-weight:500;margin-bottom:3px}.sdesc{font-size:12px;color:var(--t2);line-height:1.65}
+.code{background:var(--s2);border-radius:6px;padding:7px 11px;font-size:11px;font-family:monospace;color:var(--t2);margin-top:6px;word-break:break-all;user-select:all;border:.5px solid var(--bo)}
+.irow{display:flex;gap:6px;margin-top:7px}
+.irow input{flex:1;padding:7px 10px;font-size:12px;border:.5px solid var(--b2);border-radius:7px;background:var(--bg);color:var(--t);font-family:monospace}
+.irow input:focus{outline:none;border-color:var(--t2)}
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}.mbg.on{display:flex}
+.mbox{background:var(--s);border-radius:var(--r2);padding:20px 24px;width:400px;max-width:92vw}
+.mtit{font-size:15px;font-weight:500;margin-bottom:14px}.mbtns{display:flex;gap:7px;justify-content:flex-end;margin-top:14px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.empty{text-align:center;padding:40px 20px;color:var(--t3);font-size:13px}
+@keyframes fade{0%,100%{opacity:1}50%{opacity:.3}}.spin{animation:fade 1s infinite}
+@media(max-width:700px){.wrap{grid-template-columns:1fr}.nav{display:none}.mets{grid-template-columns:repeat(2,1fr)}.ig{grid-template-columns:1fr 1fr}.cmp{grid-template-columns:1fr}.main{padding:16px}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">Frota <em>/</em> Gestão de Avarias</div>
+  <div class="top-r">
+    <span class="slbl" id="slbl"></span>
+    <button class="tbtn" onclick="doSync()">Sincronizar</button>
+  </div>
+</div>
+<div class="wrap">
+  <aside class="nav">
+    <div class="ni on" onclick="goTo('reuniao')"><span class="ic">◉</span> Reunião diária</div>
+    <div class="ni" onclick="goTo('frota')"><span class="ic">◈</span> Frota</div>
+    <div class="sep"></div>
+    <div class="ni" onclick="goTo('nova')"><span class="ic">+</span> Nova avaria</div>
+    <div class="ni" onclick="goTo('hist')"><span class="ic">≡</span> Histórico</div>
+    <div class="sep"></div>
+    <div class="ni" onclick="goTo('cfg')"><span class="ic">⚙</span> Configuração</div>
+  </aside>
+  <main class="main">
+    <div class="pg on" id="pg-reuniao">
+      <div class="ph">
+        <div><div class="pt">Reunião Diária</div><div class="ps" id="dlbl"></div></div>
+        <div class="btnrow"><button class="btn" onclick="doSync()">↻ Sincronizar</button><button class="btn bd" onclick="closeReu()">Fechar reunião</button></div>
+      </div>
+      <div class="mets" id="mets"></div>
+      <div id="alertas"></div>
+      <div class="cmp" id="cmp" style="display:none"></div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--t3);margin-bottom:9px" id="clbl"></div>
+      <div id="cards"></div>
+    </div>
+    <div class="pg" id="pg-frota">
+      <div class="ph"><div><div class="pt">Frota</div><div class="ps">Resumo por viatura</div></div><button class="btn bd" onclick="goTo('nova')">+ Nova avaria</button></div>
+      <div class="fgrid" id="fgrid"></div>
+    </div>
+    <div class="pg" id="pg-nova">
+      <div class="ph"><div><div class="pt">Registar Avaria</div><div class="ps">Nova ocorrência na frota</div></div></div>
+      <div class="fcard">
+        <div class="fsec">Identificação</div>
+        <div class="fg">
+          <div class="fgrp"><label>Matrícula *</label><input id="fm" placeholder="AB-12-CD" style="text-transform:uppercase"></div>
+          <div class="fgrp"><label>Tipo de avaria *</label><select id="ftp"><option value="">Selecionar...</option><option>Motor</option><option>Transmissão</option><option>Travões</option><option>Elétrica / Eletrónica</option><option>Suspensão / Direção</option><option>Pneus / Rodas</option><option>Sistema hidráulico</option><option>Carroceria / Estrutura</option><option>Climatização</option><option>Outro</option></select></div>
+        </div>
+        <div class="fsec">Datas</div>
+        <div class="fg3">
+          <div class="fgrp"><label>Data da avaria</label><input type="date" id="fda"></div>
+          <div class="fgrp"><label>Entrada em oficina</label><input type="date" id="fde"></div>
+          <div class="fgrp"><label>Previsão de saída</label><input type="date" id="fds"></div>
+        </div>
+        <div class="fsec">Estado e Responsáveis</div>
+        <div class="fg">
+          <div class="fgrp"><label>Estado *</label><select id="fe"><option value="parado">Parado — em oficina</option><option value="circula">Pode circular com avaria</option><option value="aguarda">Aguarda peças</option><option value="agendado">Agendado para oficina</option></select></div>
+          <div class="fgrp"><label>Oficina / Fornecedor</label><input id="fo" placeholder="ex: Oficina Central"></div>
+        </div>
+        <div class="fg">
+          <div class="fgrp"><label>Motorista</label><input id="fmo" placeholder="Nome do motorista"></div>
+          <div class="fgrp"><label>Custo estimado (€)</label><input type="number" id="fcu" placeholder="0.00" step="0.01"></div>
+        </div>
+        <div class="fsec">Descrição</div>
+        <div class="fgrp" style="margin-bottom:10px"><label>Descrição da avaria</label><textarea id="fd" placeholder="Descreva o problema..."></textarea></div>
+        <div class="fgrp"><label>Nota inicial</label><input id="fn" placeholder="Primeiro ponto de situação (opcional)"></div>
+        <div style="margin-top:16px;display:flex;gap:8px"><button class="btn bd" onclick="regAvaria()">Registar avaria</button><button class="btn" onclick="goTo('reuniao')">Cancelar</button></div>
+      </div>
+    </div>
+    <div class="pg" id="pg-hist">
+      <div class="tbar">
+        <div><div class="pt">Histórico</div><div class="ps">Todas as avarias registadas</div></div>
+        <div class="tbar-r">
+          <select id="feh" onchange="renderHist()" style="padding:6px 9px;font-size:12px;border:.5px solid var(--b2);border-radius:7px;background:var(--s);font-family:inherit;color:var(--t)"><option value="">Todos</option><option value="parado">Parado</option><option value="circula">Pode circular</option><option value="aguarda">Aguarda peças</option><option value="concluido">Concluído</option></select>
+          <input class="srch" id="sh" placeholder="Pesquisar matrícula..." oninput="renderHist()">
+          <button class="btn" onclick="exportCSV()">Exportar CSV</button>
+        </div>
+      </div>
+      <div id="hlst"></div>
+    </div>
+    <div class="pg" id="pg-cfg">
+      <div class="ph"><div><div class="pt">Configuração</div><div class="ps">Ligação ao Google Sheets via Apps Script</div></div></div>
+      <div class="setup">
+        <div class="alert ab" style="margin-bottom:18px">Sem necessidade de conta Google Cloud. Só precisa de colar um script na sua folha — demora 5 minutos.</div>
+        <div class="step"><div class="snum">1</div><div>
+          <div class="stit">Abrir a folha Google Sheets</div>
+          <div class="sdesc">Aceda à sua folha e clique em <strong>Extensões → Apps Script</strong> (menu superior).</div>
+          <div class="code">https://docs.google.com/spreadsheets/d/1zugfZrRLX8EXrCGJfqKiCgZInQgg-lK7xtkvvmNq3JQ/edit</div>
+        </div></div>
+        <div class="step"><div class="snum">2</div><div>
+          <div class="stit">Colar o código do script</div>
+          <div class="sdesc">No editor Apps Script, apague tudo o que está e cole o conteúdo do ficheiro <strong>codigo_apps_script.gs</strong> que descarregou. Clique no ícone de disquete para guardar.</div>
+        </div></div>
+        <div class="step"><div class="snum">3</div><div>
+          <div class="stit">Implementar como aplicação web</div>
+          <div class="sdesc">Clique em <strong>Implementar → Nova implementação</strong>. Tipo: <strong>Aplicação web</strong>. Configure assim:</div>
+          <div class="code">Executar como: Eu (a minha conta Google)
+Quem tem acesso: Qualquer pessoa</div>
+          <div class="sdesc" style="margin-top:7px">Clique <strong>Implementar</strong>, autorize as permissões e copie o URL da aplicação web gerado.</div>
+        </div></div>
+        <div class="step" style="margin-bottom:0"><div class="snum">4</div><div>
+          <div class="stit">Cole o URL aqui e guarde</div>
+          <div class="sdesc" style="margin-bottom:6px">Formato: <code style="font-size:11px">https://script.google.com/macros/s/XXXX/exec</code></div>
+          <div class="irow"><input id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec"><button class="btn bs" onclick="saveUrl()">Guardar e testar</button></div>
+          <div id="cfg-st" style="margin-top:9px"></div>
+        </div></div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="mbg" id="m-est">
+  <div class="mbox">
+    <div class="mtit">Atualizar viatura</div>
+    <div class="fgrp" style="margin-bottom:9px"><label>Novo estado</label><select id="m-e"><option value="parado">Parado — em oficina</option><option value="circula">Pode circular com avaria</option><option value="aguarda">Aguarda peças</option><option value="agendado">Agendado para oficina</option><option value="concluido">Concluído / Reparado</option></select></div>
+    <div class="fgrp" style="margin-bottom:9px"><label>Nova previsão de saída</label><input type="date" id="m-d"></div>
+    <div class="fgrp"><label>Nota de atualização</label><input id="m-n" placeholder="O que mudou?"></div>
+    <div class="mbtns"><button class="btn" onclick="closeM()">Cancelar</button><button class="btn bd" onclick="confirmM()">Confirmar</button></div>
+  </div>
+</div>
+<script>
+let DB=JSON.parse(localStorage.getItem('av_db')||'[]');
+let HIST=JSON.parse(localStorage.getItem('av_hist')||'[]');
+let CFG=JSON.parse(localStorage.getItem('av_cfg')||'{}');
+let editId=null,syncing=false;
+const saveDB=()=>localStorage.setItem('av_db',JSON.stringify(DB));
+function goTo(id){
+  ['reuniao','frota','nova','hist','cfg'].forEach((x,i)=>document.querySelectorAll('.ni')[i].classList.toggle('on',x===id));
+  document.querySelectorAll('.pg').forEach(el=>el.classList.remove('on'));
+  document.getElementById('pg-'+id).classList.add('on');
+  ({reuniao:renderReu,frota:renderFrota,hist:renderHist,cfg:renderCfg})[id]?.();
+}
+const td=()=>new Date().toISOString().split('T')[0];
+const fmt=d=>{if(!d||d==='—')return'—';const[y,m,dd]=d.split('-');return dd+'/'+m+'/'+y};
+const dLeft=d=>d?Math.ceil((new Date(d)-new Date(td()))/86400000):null;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const wdays=(a,b)=>{if(!a||!b)return'—';let s=new Date(a),e=new Date(b),c=0;while(s<e){s.setDate(s.getDate()+1);if(s.getDay()&&s.getDay()<6)c++;}return c+'d úteis'};
+const eBadge=e=>({parado:'<span class="b br2">Parado</span>',circula:'<span class="b ba2">Pode circular</span>',aguarda:'<span class="b bb2">Aguarda pecas</span>',agendado:'<span class="b bx">Agendado</span>',concluido:'<span class="b bg2">Concluido</span>'}[e]||'');
+const dBadge=a=>{if(a.estado==='concluido')return'';const d=dLeft(a.dataSaida);if(d===null)return'<span class="b bx">Sem data</span>';if(d<0)return'<span class="b br2">'+Math.abs(d)+'d atraso</span>';if(d===0)return'<span class="b ba2">Sai hoje</span>';if(d===1)return'<span class="b ba2">Amanha</span>';return'<span class="b bx">'+d+'d</span>'};
+function renderReu(){
+  document.getElementById('dlbl').textContent=new Date().toLocaleDateString('pt-PT',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const av=DB.filter(a=>a.estado!=='concluido');
+  const pa=av.filter(a=>a.estado==='parado'),ci=av.filter(a=>a.estado==='circula'),ag=av.filter(a=>a.estado==='aguarda');
+  const at=av.filter(a=>{const d=dLeft(a.dataSaida);return d!==null&&d<0});
+  const dm=pa.length?Math.round(pa.reduce((s,a)=>s+(Math.max(0,dLeft(a.dataSaida)||0)),0)/pa.length):0;
+  document.getElementById('mets').innerHTML='<div class="met"><div class="ml">Em avaria</div><div class="mv '+(av.length?'a':'')+'">'+av.length+'</div><div class="ms">viaturas ativas</div></div><div class="met"><div class="ml">Paradas</div><div class="mv '+(pa.length?'r':'')+'">'+pa.length+'</div><div class="ms">em oficina</div></div><div class="met"><div class="ml">Podem circular</div><div class="mv '+(ci.length?'a':'')+'">'+ci.length+'</div><div class="ms">com avaria</div></div><div class="met"><div class="ml">Em atraso</div><div class="mv '+(at.length?'r':'')+'">'+at.length+'</div><div class="ms">prev. ultrapassada</div></div><div class="met"><div class="ml">Dias medios</div><div class="mv">'+dm+'</div><div class="ms">para saida</div></div>';
+  let al='';
+  if(at.length)al+='<div class="alert ar">Atencao: '+at.length+' viatura(s) com previsao ultrapassada: <strong>'+at.map(a=>a.matricula).join(', ')+'</strong></div>';
+  const hs=av.filter(a=>dLeft(a.dataSaida)===0);
+  if(hs.length)al+='<div class="alert aa">Previstas para sair hoje: <strong>'+hs.map(a=>a.matricula).join(', ')+'</strong></div>';
+  if(ag.length)al+='<div class="alert ab">'+ag.length+' viatura(s) aguardam pecas</div>';
+  document.getElementById('alertas').innerHTML=al;
+  const last=HIST[HIST.length-1];const cmpEl=document.getElementById('cmp');
+  if(last){cmpEl.style.display='grid';
+    const df=(n)=>n===0?'<span style="color:var(--t3);font-size:11px">=</span>':'<span class="'+(n>0?'dn':'up')+'">'+(n>0?'+':'')+n+'</span>';
+    cmpEl.innerHTML='<div class="cb"><div class="ct2">Reuniao anterior - '+fmt(last.data)+'</div><div class="cr"><span>Em avaria</span><span>'+last.at+'</span></div><div class="cr"><span>Paradas</span><span>'+last.pa+'</span></div><div class="cr"><span>Podem circular</span><span>'+last.ci+'</span></div><div class="cr"><span>Em atraso</span><span>'+last.at2+'</span></div></div><div class="cb"><div class="ct2">Variacao</div><div class="cr"><span>Em avaria</span>'+df(av.length-last.at)+'</div><div class="cr"><span>Paradas</span>'+df(pa.length-last.pa)+'</div><div class="cr"><span>Podem circular</span>'+df(ci.length-last.ci)+'</div><div class="cr"><span>Em atraso</span>'+df(at.length-last.at2)+'</div></div>';
+  }else cmpEl.style.display='none';
+  document.getElementById('clbl').textContent=av.length?'Viaturas em acompanhamento':'';
+  if(!av.length){document.getElementById('cards').innerHTML='<div class="empty">Nenhuma avaria ativa - frota operacional.</div>';return;}
+  const srt=[...av].sort((a,b)=>{const o={parado:0,aguarda:1,circula:2,agendado:3};return(o[a.estado]??4)-(o[b.estado]??4)||(dLeft(a.dataSaida)||999)-(dLeft(b.dataSaida)||999)});
+  document.getElementById('cards').innerHTML=srt.map(a=>{
+    const d=dLeft(a.dataSaida);
+    const p=a.dataEntrada&&a.dataSaida?Math.min(100,Math.max(0,Math.round((new Date(td())-new Date(a.dataEntrada))/(new Date(a.dataSaida)-new Date(a.dataEntrada))*100))):0;
+    const pc=d!==null&&d<0?'var(--red)':p>75?'var(--amb)':'var(--blu)';
+    const ns=a.notas||[];
+    const nh=ns.length?ns.slice(-4).reverse().map(n=>'<div class="nota"><span class="nd">'+fmt(n.data)+'</span><span class="nt">'+n.texto+'</span></div>').join(''):'<span style="font-size:11px;color:var(--t3)">Sem notas.</span>';
+    return '<div class="card"><div class="ch"><div><div class="cn">'+a.matricula+'</div><div class="cs">'+a.tipo+(a.oficina?' - '+a.oficina:'')+'</div></div><div class="bgs">'+eBadge(a.estado)+' '+dBadge(a)+'</div></div><div class="ig"><div><label>Entrada</label><strong>'+fmt(a.dataEntrada)+'</strong></div><div><label>Prev. saida</label><strong>'+fmt(a.dataSaida)+'</strong></div><div><label>Duracao</label><strong>'+wdays(a.dataEntrada,a.dataSaida)+'</strong></div><div><label>Motorista</label><strong>'+(a.motorista||'--')+'</strong></div></div>'+(a.dataSaida?'<div class="prog"><div class="pf" style="width:'+p+'%;background:'+pc+'"></div></div>':'')+'<div class="notas">'+nh+'<div class="nadd"><input id="ni-'+a.id+'" placeholder="Ponto de situacao..." onkeydown="if(event.key===\'Enter\')addNota(\''+a.id+'\')"><button class="btn bs" onclick="addNota(\''+a.id+'\')">Adicionar</button><button class="btn bs" onclick="openM(\''+a.id+'\')">Estado</button></div></div></div>';
+  }).join('');
+}
+function closeReu(){
+  const av=DB.filter(a=>a.estado!=='concluido');
+  HIST.push({data:td(),at:av.length,pa:av.filter(a=>a.estado==='parado').length,ci:av.filter(a=>a.estado==='circula').length,at2:av.filter(a=>{const d=dLeft(a.dataSaida);return d!==null&&d<0}).length});
+  localStorage.setItem('av_hist',JSON.stringify(HIST));renderReu();alert('Reuniao fechada. A comparacao estara disponivel na proxima reuniao.');
+}
+function addNota(id){const inp=document.getElementById('ni-'+id);const txt=inp.value.trim();if(!txt)return;const a=DB.find(x=>x.id===id);if(!a)return;if(!a.notas)a.notas=[];a.notas.push({data:td(),texto:txt});inp.value='';saveDB();doSync();renderReu();}
+function openM(id){editId=id;const a=DB.find(x=>x.id===id);document.getElementById('m-e').value=a.estado;document.getElementById('m-d').value=a.dataSaida||'';document.getElementById('m-n').value='';document.getElementById('m-est').classList.add('on');}
+function closeM(){document.getElementById('m-est').classList.remove('on');editId=null;}
+function confirmM(){if(!editId)return;const a=DB.find(x=>x.id===editId);const est=document.getElementById('m-e').value,dt=document.getElementById('m-d').value,nt=document.getElementById('m-n').value.trim();a.estado=est;if(dt)a.dataSaida=dt;if(!a.notas)a.notas=[];a.notas.push({data:td(),texto:'Estado: '+est+(dt?' - Saida: '+fmt(dt):'')+(nt?' - '+nt:'')});saveDB();doSync();closeM();renderReu();}
+function regAvaria(){
+  const mat=document.getElementById('fm').value.trim().toUpperCase(),tipo=document.getElementById('ftp').value;
+  if(!mat||!tipo){alert('Matricula e tipo sao obrigatorios.');return;}
+  const nota=document.getElementById('fn').value.trim();
+  const a={id:uid(),matricula:mat,tipo,dataAvaria:document.getElementById('fda').value,dataEntrada:document.getElementById('fde').value,dataSaida:document.getElementById('fds').value,estado:document.getElementById('fe').value,oficina:document.getElementById('fo').value.trim(),motorista:document.getElementById('fmo').value.trim(),custo:document.getElementById('fcu').value,descricao:document.getElementById('fd').value.trim(),notas:nota?[{data:td(),texto:nota}]:[]};
+  DB.push(a);saveDB();doSync();
+  ['fm','fda','fde','fds','fo','fmo','fcu','fd','fn'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('ftp').selectedIndex=0;document.getElementById('fde').value=td();goTo('reuniao');
+}
+function renderFrota(){
+  if(!DB.length){document.getElementById('fgrid').innerHTML='<div class="empty">Nenhuma viatura registada.</div>';return;}
+  const g={};DB.forEach(a=>{if(!g[a.matricula])g[a.matricula]=[];g[a.matricula].push(a);});
+  document.getElementById('fgrid').innerHTML=Object.entries(g).map(([m,l])=>{const atv=l.find(a=>a.estado!=='concluido');const c=l.reduce((s,a)=>s+(parseFloat(a.custo)||0),0);return'<div class="card"><div class="ch"><div><div class="cn">'+m+'</div><div class="cs">'+l.length+' avaria(s)</div></div><div class="bgs">'+(atv?eBadge(atv.estado)+dBadge(atv):'<span class="b bg2">Operacional</span>')+'</div></div><div class="ig" style="grid-template-columns:1fr 1fr"><div><label>Ultima avaria</label><strong>'+l[l.length-1].tipo+'</strong></div><div><label>Custo est. total</label><strong>'+(c?c.toFixed(2)+' EUR':'--')+'</strong></div></div></div>';}).join('');
+}
+function renderHist(){
+  const q=document.getElementById('sh').value.trim().toLowerCase(),fe=document.getElementById('feh').value;
+  const l=DB.filter(a=>(!q||a.matricula.toLowerCase().includes(q))&&(!fe||a.estado===fe)).slice().reverse();
+  if(!l.length){document.getElementById('hlst').innerHTML='<div class="empty">Sem resultados.</div>';return;}
+  document.getElementById('hlst').innerHTML=l.map(a=>'<div class="card"><div class="ch"><div><div class="cn">'+a.matricula+' - '+a.tipo+'</div><div class="cs">'+(a.descricao||'')+'</div></div><div class="bgs">'+eBadge(a.estado)+'</div></div><div class="ig"><div><label>Avaria</label><strong>'+fmt(a.dataAvaria)+'</strong></div><div><label>Entrada</label><strong>'+fmt(a.dataEntrada)+'</strong></div><div><label>Prev. saida</label><strong>'+fmt(a.dataSaida)+'</strong></div><div><label>Oficina</label><strong>'+(a.oficina||'--')+'</strong></div></div>'+((a.notas||[]).length?'<div class="notas">'+(a.notas||[]).map(n=>'<div class="nota"><span class="nd">'+fmt(n.data)+'</span><span class="nt">'+n.texto+'</span></div>').join('')+'</div>':'')+'</div>').join('');
+}
+function exportCSV(){
+  const h=['ID','Matricula','Tipo','Estado','Data Avaria','Entrada','Prev. Saida','Oficina','Motorista','Custo','Descricao','Notas'];
+  const r=DB.map(a=>[a.id,a.matricula,a.tipo,a.estado,a.dataAvaria||'',a.dataEntrada||'',a.dataSaida||'',a.oficina||'',a.motorista||'',a.custo||'',a.descricao||'',(a.notas||[]).map(n=>n.data+': '+n.texto).join(' | ')]);
+  const csv=[h,...r].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const el=document.createElement('a');el.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));el.download='avarias_'+td()+'.csv';el.click();
+}
+function renderCfg(){document.getElementById('cfg-url').value=CFG.url||'';if(CFG.url)document.getElementById('cfg-st').innerHTML='<div class="alert ag">URL configurado. A sincronizacao esta ativa.</div>';}
+async function saveUrl(){
+  const url=document.getElementById('cfg-url').value.trim();if(!url){alert('Cole o URL do Apps Script.');return;}
+  CFG.url=url;localStorage.setItem('av_cfg',JSON.stringify(CFG));setSyncLbl('A testar...',true);
+  try{const r=await fetch(url+'?action=ping',{redirect:'follow'});const j=await r.json();
+    if(j.ok){document.getElementById('cfg-st').innerHTML='<div class="alert ag">Ligacao bem-sucedida! Sincronizacao ativa.</div>';setSyncLbl('Ligado');}
+    else{document.getElementById('cfg-st').innerHTML='<div class="alert ar">Erro: '+(j.msg||'resposta invalida')+'</div>';setSyncLbl('');}
+  }catch(e){document.getElementById('cfg-st').innerHTML='<div class="alert ar">Nao foi possivel ligar. Verifique o URL e as permissoes.<br><small>'+e.message+'</small></div>';setSyncLbl('');}
+}
+const setSyncLbl=(msg,spin=false)=>{const el=document.getElementById('slbl');el.textContent=msg;el.className='slbl'+(spin?' spin':'')};
+async function doSync(){
+  if(syncing||!CFG.url){if(!CFG.url)setSyncLbl('Configure em Configuracao');return;}
+  syncing=true;setSyncLbl('A sincronizar...',true);
+  try{const params=new URLSearchParams({action:'save',data:JSON.stringify(DB)});const r=await fetch(CFG.url+'?'+params.toString(),{redirect:'follow'});const j=await r.json();
+    if(j.ok)setSyncLbl('Sincronizado '+new Date().toLocaleTimeString('pt-PT'));else setSyncLbl('Erro: '+(j.msg||'?'));
+  }catch(e){setSyncLbl('Sem ligacao - dados guardados localmente');console.warn(e);}
+  syncing=false;
+}
+document.getElementById('fde').value=td();document.getElementById('fda').value=td();
+renderReu();if(CFG.url)setSyncLbl('Script configurado');
+</script>
+</body>
+</html>
